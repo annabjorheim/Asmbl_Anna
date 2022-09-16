@@ -77,70 +77,31 @@ def file_exists(seqlist, program, path, extention):
     if re_run:
         return re_run
 
-def run_abricate(current_dir, seqlist, database, aboutpath):
-    #What is the issue here?
-    fasta=(current_dir+'assembly/'+item+'_assembly/'+item+'_assembly.fasta')
-    for seq in seqlist:
-        fasta=(current_dir+'assembly/'+seq+'_assembly/'+seq+'_assembly.fasta')
-        run_command(['abricate --db=', database,' --minid 90 --mincov 90 ',fasta,' -o ',aboutpath,database,'_',seq,'_',todays_date,'.txt'], shell= True) 
-    run_command(['abricate --summary ',aboutpath,database,'*txt >  ',aboutpath,database,'_summary_',todays_date,'.txt'], shell= True) 
 
 #Check versions
-def create_versions_doc(version_output):
-    run_command(['echo "Program\tVersion" >> versions_',version_output,'.txt'], shell=True)
-    pass
+def check_versions_doc(version_output):
+    """Check that the programs are installed and save the version numbers in a text file called versions.txt"""
+    logging.info("Checking program versions.")
+    
+    try:
+        run_command(['echo "Program\tVersion" >> versions_',version_output,'.txt'], shell=True)
+        run_command(['unicycler --version >> versions_',version_output,'.txt'], shell=True)
+        run_command(['spades.py --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['trimgalversion=$(trim_galore --version | grep version | tr -d " " | sed "s/^/trim_galore\t/g" ) ; echo $trimgalversion >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['cutadapt --version | sed "s/^/cutadapt\t/g" >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['fastqc --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['multiqc --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['mlst --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['quast.py --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['bwa 2>&1 | grep Version | sed "s/^/bwa\t/g" >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['samtools --version | grep samtools >> versions_',version_output,'.txt'], shell=True)    ##Check for empty results, skip
+        run_command(['picard 2>&1 SamFormatConverter --version | sed "s/^/picard\t/g" >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
+        run_command(['kleborate --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
 
-def check_unicycler_version(version_output):
-    run_command(['unicycler --version >> versions_',version_output,'.txt'], shell=True)
-    pass
+    except:
+        logging.exception("Could not check versions of programs.")
+        sys.exit("Could not check versions of programs. Please check that the conda env assembly is activated and that the programs are in PATH")
 
-def check_spades_version(version_output):
-    run_command(['spades.py --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_trimgalore_version(version_output):
-    run_command(['trimgalversion=$(trim_galore --version | grep version | tr -d " " | sed "s/^/trim_galore\t/g" ) ; echo $trimgalversion >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_cutadapt_version(version_output):
-    run_command(['cutadapt --version | sed "s/^/cutadapt\t/g" >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_fastqc_version(version_output):
-    run_command(['fastqc --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_multiqc_version(version_output):
-    run_command(['multiqc --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_mlst_version(version_output):
-    run_command(['mlst --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_quast_version(version_output):
-    run_command(['quast.py --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_bwa_version(version_output):
-    run_command(['bwa 2>&1 | grep Version | sed "s/^/bwa\t/g" >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_samtools_version(version_output):
-    run_command(['samtools --version | grep samtools >> versions_',version_output,'.txt'], shell=True)    ##Check for empty results, skip
-    pass
-
-def check_picard_version(version_output):
-    run_command(['picard 2>&1 SamFormatConverter --version | sed "s/^/picard\t/g" >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_abricate_version(version_output):
-    run_command(['abricate --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
-
-def check_kleborate_version(version_output):
-    run_command(['kleborate --version >> versions_',version_output,'.txt'], shell=True)     ##Check for empty results, skip
-    pass
 
 ##To do: In future, add versions to final assembly stats file.
 
@@ -153,7 +114,7 @@ def main():
     todays_date = now.strftime('%Y-%m-%d_%H-%M-%S')
     today = now.strftime('%Y-%m-%d')
     version_output=today
-    create_versions_doc(version_output)
+    check_versions_doc(version_output)
     
     # Set up log to stdout
     logfile= None
@@ -279,8 +240,6 @@ def main():
                 
         if run_list:
             logging.info("Running TrimGalore")
-            check_trimgalore_version(version_output)
-            check_cutadapt_version(version_output)
             uniq_run_list = set(run_list)
             with open('uniq_trimgalore_list.txt', 'w') as w:
                 for item in uniq_run_list:
@@ -316,8 +275,6 @@ def main():
                     run_list.append(item + ("_2_val_2.fq.gz"))
             if run_list:
                 logging.info("Running FastQC on trimmed files")
-                check_fastqc_version(version_output)
-                check_multiqc_version(version_output)
                 uniq_run_list = set(run_list)
                 with open('uniq_fastqc_list.txt', 'w') as w:
                     for item in uniq_run_list:
@@ -362,10 +319,7 @@ def main():
         
         if run_list:
             logging.info("Running Unicycler assembly on unassembled files")
-            check_unicycler_version(version_output)
-            check_spades_version(version_output)
 
-            check_samtools_version(version_output)
             uniq_run_list = set(run_list)
             with open('uniq_run_list_as.txt', 'w') as f:
                 for item in uniq_run_list:
@@ -406,7 +360,6 @@ def main():
         #Run Quast
         if not args.noquast and not args.noex:
             logging.info('Running Quast on fasta')
-            check_quast_version(version_output)
             createFolder(current_dir+'QC/Quast')
             try:
                 run_command(['quast.py ',current_dir,'fasta/*fasta -o ',current_dir,'QC/Quast > ',current_dir,'logs/quast_',todays_date,'.log 2>&1'], shell=True)
@@ -427,7 +380,6 @@ def main():
         createFolder(current_dir+'analyses')
         if not args.nomlst and not args.noex:
             logging.info('Looking for MLST')
-            check_mlst_version(version_output)
             try:
                 run_command(['cd ',current_dir,'fasta/ ; mlst *fasta > ',current_dir,'analyses/mlst.tsv ; cd ',current_dir], shell= True)
                 logging.info("Species and MLST identification success")
@@ -447,8 +399,6 @@ def main():
             if run_list:
                 createFolder(current_dir+'QC/readDepth') 
                 logging.info("Calculating average read depth of each sample")
-                check_bwa_version(version_output)
-                check_picard_version(version_output)
                 uniq_run_list = set(run_list)
                 # with open('uniq_readDepth_list.txt', 'w') as w:
                 #     for item in uniq_run_list:
@@ -485,26 +435,12 @@ def main():
         #ToDO: integrate Kleborate and ABRICATE in final report
         if args.klebs:
             logging.info("Running Kleborate on your samples")
-            check_kleborate_version(version_output)
             try:
                 koutfile=(current_dir+'analyses/Kleborate_'+todays_date+'.txt') 
                 run_command(['kleborate --all -a ',current_dir,'fasta/*fasta -o ',koutfile], shell= True) 
             except:
                 print("Kleborate failed, do you have kleborate in your path?")
                 pass
-        #Run ABRICATE
-        #if args.abricate_all or args.resfinder or args.argannot or args.card or args.ncbi or args.vfdb or args.ecoh or args.plasmidfinder:
-            #aboutpath=(current_dir+'analyses/') 
-        #if args.resfinder or args.abricate_all:
-            #logging.info("Running ABRICATE resfinder on your samples")
-            #check_abricate_version(version_output)
-            #try:
-                #run_abricate(current_dir, uniq_run_list, 'resfinder', aboutpath)
-            #except:
-                #print("Abricate failed, do you have abricate in your path?")
-                #pass
-
-        #if args.argannot or args.abricate_all:
            
 
 
